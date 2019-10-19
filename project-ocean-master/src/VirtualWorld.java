@@ -43,7 +43,7 @@ public final class VirtualWorld
    private static final double FASTER_SCALE = 0.25;
    private static final double FASTEST_SCALE = 0.10;
 
-   private static final int KEYED_IMAGE_MIN = 5;
+   public static final int KEYED_IMAGE_MIN = 5;
    private static final int KEYED_RED_IDX = 2;
    private static final int KEYED_GREEN_IDX = 3;
    private static final int KEYED_BLUE_IDX = 4;

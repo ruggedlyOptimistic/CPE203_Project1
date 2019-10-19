@@ -73,6 +73,4 @@ final class Functions
                          entity));
       }
    }
-
-
 }

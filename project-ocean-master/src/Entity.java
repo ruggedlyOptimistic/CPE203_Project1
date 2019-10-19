@@ -21,26 +21,25 @@ final class Entity
    private int animationPeriod;
 
    // Migrated from Functions
-   private final String CRAB_KEY = "crab";
-   private final String CRAB_ID_SUFFIX = " -- crab";
-   private final int CRAB_PERIOD_SCALE = 4;
-   private final int CRAB_ANIMATION_MIN = 50;
-   private final int CRAB_ANIMATION_MAX = 150;
+   public final String CRAB_KEY = "crab";
+   public final String CRAB_ID_SUFFIX = " -- crab";
+   public final int CRAB_PERIOD_SCALE = 4;
+   public final int CRAB_ANIMATION_MIN = 50;
+   public final int CRAB_ANIMATION_MAX = 150;
 
-   private final String QUAKE_KEY = "quake";
-   private final int QUAKE_ANIMATION_REPEAT_COUNT = 10;
+   public final String QUAKE_KEY = "quake";
+   public final int QUAKE_ANIMATION_REPEAT_COUNT = 10;
 
-   private final String FISH_ID_PREFIX = "fish -- ";
-   private final int FISH_CORRUPT_MIN = 20000;
-   private final int FISH_CORRUPT_MAX = 30000;
+   public final String FISH_ID_PREFIX = "fish -- ";
+   public final int FISH_CORRUPT_MIN = 20000;
+   public final int FISH_CORRUPT_MAX = 30000;
 
-   private final int ATLANTIS_ANIMATION_PERIOD = 70;
-   private final int ATLANTIS_ANIMATION_REPEAT_COUNT = 7;
+   public final int ATLANTIS_ANIMATION_PERIOD = 70;
+   public final int ATLANTIS_ANIMATION_REPEAT_COUNT = 7;
 
-   private final String QUAKE_ID = "quake";
-   private final int QUAKE_ACTION_PERIOD = 1100;
-   private final int QUAKE_ANIMATION_PERIOD = 100;
-
+   public final String QUAKE_ID = "quake";
+   public final int QUAKE_ACTION_PERIOD = 1100;
+   public final int QUAKE_ANIMATION_PERIOD = 100;
 
    public Entity(EntityKind kind, String id, Point position,
       List<PImage> images, int resourceLimit, int resourceCount,
@@ -110,14 +109,9 @@ final class Entity
       }
    }
 
-   public void setImageIndex(int i)
-   {
-      this.imageIndex = i;
-   }
-
    public void nextImage()
    {
-      setImageIndex((this.imageIndex + 1) % this.images.size());
+      this.imageIndex = (this.imageIndex + 1) % this.images.size();
    }
 
    public void executeOctoFullActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)
@@ -468,28 +462,28 @@ final class Entity
               resourceLimit, resourceLimit, actionPeriod, animationPeriod);
    }
 
-   public Entity createOctoNotFull(String id, int resourceLimit,
+   public static Entity createOctoNotFull(String id, int resourceLimit,
                                           Point position, int actionPeriod, int animationPeriod,
                                           List<PImage> images)
    {
       return new Entity(EntityKind.OCTO_NOT_FULL, id, position, images,
               resourceLimit, 0, actionPeriod, animationPeriod);
    }
-   public Entity createAtlantis(String id, Point position,
+   public static Entity createAtlantis(String id, Point position,
                                        List<PImage> images)
    {
       return new Entity(EntityKind.ATLANTIS, id, position, images,
               0, 0, 0, 0);
    }
 
-   public Entity createObstacle(String id, Point position,
+   public static Entity createObstacle(String id, Point position,
                                        List<PImage> images)
    {
       return new Entity(EntityKind.OBSTACLE, id, position, images,
               0, 0, 0, 0);
    }
 
-   public Entity createFish(String id, Point position, int actionPeriod,
+   public static Entity createFish(String id, Point position, int actionPeriod,
                                    List<PImage> images)
    {
       return new Entity(EntityKind.FISH, id, position, images, 0, 0,
@@ -509,7 +503,7 @@ final class Entity
               0, 0, QUAKE_ACTION_PERIOD, QUAKE_ANIMATION_PERIOD);
    }
 
-   public Entity createSgrass(String id, Point position, int actionPeriod,
+   public static Entity createSgrass(String id, Point position, int actionPeriod,
                                      List<PImage> images)
    {
       return new Entity(EntityKind.SGRASS, id, position, images, 0, 0,
@@ -535,7 +529,7 @@ final class Entity
       return properties.length == VirtualWorld.OCTO_NUM_PROPERTIES;
    }
 
-   public boolean parseObstacle(String[] properties, WorldModel world,
+   public static boolean parseObstacle(String[] properties, WorldModel world,
                                        ImageStore imageStore)
    {
       if (properties.length == VirtualWorld.OBSTACLE_NUM_PROPERTIES)
@@ -551,7 +545,7 @@ final class Entity
       return properties.length == VirtualWorld.OBSTACLE_NUM_PROPERTIES;
    }
 
-   public boolean parseFish(String[] properties, WorldModel world,
+   public static boolean parseFish(String[] properties, WorldModel world,
                                    ImageStore imageStore)
    {
       if (properties.length == VirtualWorld.FISH_NUM_PROPERTIES)
@@ -567,7 +561,7 @@ final class Entity
       return properties.length == VirtualWorld.FISH_NUM_PROPERTIES;
    }
 
-   public boolean parseAtlantis(String[] properties, WorldModel world,
+   public static boolean parseAtlantis(String[] properties, WorldModel world,
                                        ImageStore imageStore)
    {
       if (properties.length == VirtualWorld.ATLANTIS_NUM_PROPERTIES)
@@ -582,7 +576,7 @@ final class Entity
       return properties.length == VirtualWorld.ATLANTIS_NUM_PROPERTIES;
    }
 
-   public boolean parseSgrass(String[] properties, WorldModel world,
+   public static boolean parseSgrass(String[] properties, WorldModel world,
                                      ImageStore imageStore)
    {
       if (properties.length == VirtualWorld.SGRASS_NUM_PROPERTIES)
@@ -600,7 +594,7 @@ final class Entity
    }
 
    public static boolean processLine(String line, WorldModel world,
-                                     ImageStore imageStore)
+                              ImageStore imageStore)
    {
       String[] properties = line.split("\\s");
       if (properties.length > 0)
@@ -624,4 +618,5 @@ final class Entity
 
       return false;
    }
+
 }
