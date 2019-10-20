@@ -34,7 +34,7 @@ final class Entity
    public final int FISH_CORRUPT_MIN = 20000;
    public final int FISH_CORRUPT_MAX = 30000;
 
-   public final int ATLANTIS_ANIMATION_PERIOD = 70;
+   public static final int ATLANTIS_ANIMATION_PERIOD = 70;
    public final int ATLANTIS_ANIMATION_REPEAT_COUNT = 7;
 
    public final String QUAKE_ID = "quake";
@@ -92,6 +92,7 @@ final class Entity
    public int getActionPeriod() {
       return actionPeriod;
    }
+
    public int getAnimationPeriod()
    {
       switch (this.getKind()) // using this.getKind()
@@ -105,7 +106,7 @@ final class Entity
          default:
             throw new UnsupportedOperationException(
                     String.format("getAnimationPeriod not supported for %s",
-                            this.kind));
+                            this.getKind()));
       }
    }
 
@@ -116,31 +117,33 @@ final class Entity
 
    public void executeOctoFullActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)
    {
+//      System.out.println("\t\t\t\t\tEntity.executeOctoFullActivity");
       Optional<Entity> fullTarget = world.findNearest(getPosition(),
               EntityKind.ATLANTIS);
 
       if (fullTarget.isPresent() &&
-              moveToFull(this, world, fullTarget.get(), scheduler))
+              moveToFull(world, fullTarget.get(), scheduler))
       {
+//         System.out.println("Octopus full");
          //at atlantis trigger animation
-         scheduleActions(scheduler, world, imageStore);
+         scheduleActions(fullTarget.get(), scheduler, world, imageStore); // Atlantis parties!!!
 
          //transform to unfull
          transformFull(world, scheduler, imageStore);
       }
       else
       {  // scheduleEvent(entity, action, long)
-         scheduler.scheduleEvent(this, createActivityAction(world, imageStore), getActionPeriod());
+         scheduler.scheduleEvent(this, this.createActivityAction(world, imageStore), this.getActionPeriod());
       }
    }
 
-   public void executeOctoNotFullActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)
+   public void executeOctoNotFullActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)   // this methods determines the activity of a not full octopus
    {
       Optional<Entity> notFullTarget = world.findNearest(getPosition(),
               EntityKind.FISH);
 
       if (!notFullTarget.isPresent() ||
-              !moveToNotFull(this, world, notFullTarget.get(), scheduler) ||
+              !moveToNotFull(world, notFullTarget.get(), scheduler) ||
               !transformNotFull(world, scheduler, imageStore))
       {
          scheduler.scheduleEvent(this,
@@ -149,8 +152,9 @@ final class Entity
       }
    }
 
-   public void executeFishActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)
+   public void executeFishActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler) // this method creates a crab in place of a fish
    {
+      System.out.println("Trying to create a crab");
       Point pos = getPosition();  // store current position before removing
 
       world.removeEntity(this);
@@ -163,17 +167,17 @@ final class Entity
               imageStore.getImageList(CRAB_KEY));
 
       world.addEntity(crab);
-      scheduleActions(scheduler, world, imageStore);
+      scheduleActions(crab, scheduler, world, imageStore);
    }
 
-   public void executeCrabActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)
+   public void executeCrabActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler) // this methods determines the activity of a crab
    {
       Optional<Entity> crabTarget = world.findNearest(getPosition(), EntityKind.SGRASS);
       long nextPeriod = getActionPeriod();
 
       if (crabTarget.isPresent())
       {
-         Point tgtPos = crabTarget.get().position;
+         Point tgtPos = crabTarget.get().getPosition();
 
          if (moveToCrab(world, crabTarget.get(), scheduler))
          {
@@ -182,7 +186,7 @@ final class Entity
 
             world.addEntity(quake);
             nextPeriod += getActionPeriod();
-            scheduleActions(scheduler, world, imageStore);
+            scheduleActions(quake, scheduler, world, imageStore);
          }
       }
 
@@ -191,31 +195,33 @@ final class Entity
               nextPeriod);
    }
 
-   public void executeQuakeActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)
+   public void executeQuakeActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)   // this methods determines what happens in the event of an earthquake
    {
       scheduler.unscheduleAllEvents(this);
       world.removeEntity(this);
    }
 
-   public void executeAtlantisActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)
+   public void executeAtlantisActivity(WorldModel world, ImageStore imageStore, EventScheduler scheduler)   // I think this is normal because we don't have the Atlantis image files
    {
       scheduler.unscheduleAllEvents(this);
       world.removeEntity(this);
    }
 
    public void executeSgrassActivity(WorldModel world,
-                                     ImageStore imageStore, EventScheduler scheduler)
+                                     ImageStore imageStore, EventScheduler scheduler)  // this methods determines the activity of seagrass
    {
+      System.out.println("Entity.executeSgrassActivity");
       Optional<Point> openPt = world.findOpenAround(getPosition());
 
-      if (openPt.isPresent())
+      if (openPt.isPresent()) // if the space around the grass is open, put a fish here and assign a randomized "corrupt" period
       {
          Entity fish = createFish(FISH_ID_PREFIX + getId(),
                  openPt.get(), FISH_CORRUPT_MIN +
                          Functions.rand.nextInt(FISH_CORRUPT_MAX - FISH_CORRUPT_MIN),
                  imageStore.getImageList(VirtualWorld.FISH_KEY));
          world.addEntity(fish);
-         scheduleActions(scheduler, world, imageStore);
+         scheduleActions(fish, scheduler, world, imageStore); // previously was passing "this" into scheduleActions rather than "fish"
+         System.out.println("Entity: created a new fish with period: " + fish.getActionPeriod());
       }
 
       scheduler.scheduleEvent(this,
@@ -223,60 +229,63 @@ final class Entity
               getActionPeriod());
    }
 
-   public void scheduleActions(EventScheduler scheduler, WorldModel world, ImageStore imageStore)
+   public void scheduleActions(Entity e, EventScheduler scheduler, WorldModel world, ImageStore imageStore)
    {
-      switch (getKind())
+      System.out.println("Entity.scheduleActions / this.getKind: " + e.getKind());
+//      System.out.println("Entity.scheduleActions: Scheduling actions for: " + this.getKind());
+      switch (e.getKind())
       {
          case OCTO_FULL:
-            scheduler.scheduleEvent(this,
-                    createActivityAction(world, imageStore),
-                    getActionPeriod());
-            scheduler.scheduleEvent(this, createAnimationAction(0),
-                    getAnimationPeriod());
+//            System.out.println("Entity.scheduleActions: Trying to schedule action for a full octopus");
+            scheduler.scheduleEvent(e,
+                    e.createActivityAction(world, imageStore),
+                    e.getActionPeriod());
+            scheduler.scheduleEvent(e, e.createAnimationAction(0),
+                    e.getAnimationPeriod());
             break;
 
          case OCTO_NOT_FULL:
-            scheduler.scheduleEvent(this,
-                    createActivityAction(world, imageStore),
-                    getActionPeriod());
-            scheduler.scheduleEvent(this,
-                    createAnimationAction(0), getAnimationPeriod());
+            scheduler.scheduleEvent(e,
+                    e.createActivityAction(world, imageStore),
+                    e.getActionPeriod());
+            scheduler.scheduleEvent(e,
+                    e.createAnimationAction(0), e.getAnimationPeriod());
             break;
 
          case OBSTACLE:
             break;
          case FISH:
-            scheduler.scheduleEvent(this,
-                    createActivityAction(world, imageStore),
-                    getActionPeriod());
+            scheduler.scheduleEvent(e,
+                    e.createActivityAction(world, imageStore),
+                    e.getActionPeriod());
             break;
 
          case CRAB:
-            scheduler.scheduleEvent(this,
-                    createActivityAction(world, imageStore),
-                   getActionPeriod());
-            scheduler.scheduleEvent(this,
-                    createAnimationAction(0), getAnimationPeriod());
+            scheduler.scheduleEvent(e,
+                    e.createActivityAction(world, imageStore),
+                   e.getActionPeriod());
+            scheduler.scheduleEvent(e,
+                    e.createAnimationAction(0), e.getAnimationPeriod());
             break;
 
          case QUAKE:
-            scheduler.scheduleEvent(this,
-                    createActivityAction(world, imageStore),
-                    getActionPeriod());
-            scheduler.scheduleEvent(this,
-                    createAnimationAction(QUAKE_ANIMATION_REPEAT_COUNT),
-                    getAnimationPeriod());
+            scheduler.scheduleEvent(e,
+                    e.createActivityAction(world, imageStore),
+                    e.getActionPeriod());
+            scheduler.scheduleEvent(e,
+                    e.createAnimationAction(QUAKE_ANIMATION_REPEAT_COUNT),
+                    e.getAnimationPeriod());
             break;
 
          case SGRASS:
-            scheduler.scheduleEvent(this,
-                    createActivityAction(world, imageStore),
-                    getActionPeriod());
+            scheduler.scheduleEvent(e,
+                    e.createActivityAction(world, imageStore),
+                    e.getActionPeriod());
             break;
          case ATLANTIS:
-            scheduler.scheduleEvent(this,
-                    createAnimationAction(ATLANTIS_ANIMATION_REPEAT_COUNT),
-                    getAnimationPeriod());
+            scheduler.scheduleEvent(e,
+                    e.createAnimationAction(ATLANTIS_ANIMATION_REPEAT_COUNT),
+                    e.getActionPeriod());
             break;
 
          default:
@@ -285,18 +294,23 @@ final class Entity
 
    public boolean transformNotFull(WorldModel world, EventScheduler scheduler, ImageStore imageStore)
    {
+//      System.out.println("Entity.transformNotFull");
       if (getResourceCount() >= getResourceLimit())
       {
+//         System.out.println("\t\t\tcreating a full octo...");
          Entity octo = createOctoFull(getId(), getResourceLimit(),
                  getPosition(), getActionPeriod(), getAnimationPeriod(),
                  getImages());
-
+//         System.out.println("\t\t\tremoving the notFullOcto");
          world.removeEntity(this);
+//         System.out.println("\t\t\tscheduling...");
          scheduler.unscheduleAllEvents(this);
-
+//         System.out.println("\t\t\tadding...");
          world.addEntity(octo);
-         scheduleActions(scheduler, world, imageStore);
+//         System.out.println("\t\t\tscheduling... " + this.getKind());
+         scheduleActions(octo, scheduler, world, imageStore);
 
+//         System.out.println("\t\t\tdone!");
          return true;
       }
 
@@ -313,15 +327,17 @@ final class Entity
       scheduler.unscheduleAllEvents(this);
 
       world.addEntity(octo);
-      scheduleActions(scheduler, world, imageStore);
+      scheduleActions(octo, scheduler, world, imageStore);
    }
 
-   public boolean moveToNotFull(Entity octo, WorldModel world,
+   public boolean moveToNotFull(WorldModel world,
                                 Entity target, EventScheduler scheduler)
    {
-      if (Functions.adjacent(octo.position, target.position))
+//      System.out.println("Entity.moveToNotFull"); // enters here
+      if (Functions.adjacent(this.getPosition(), target.getPosition()))
       {
-         octo.resourceCount += 1;
+//         System.out.println("Entity.moveToNotFull / returning true");
+         this.resourceCount += 1;
          world.removeEntity(target);
          scheduler.unscheduleAllEvents(target);
 
@@ -329,9 +345,9 @@ final class Entity
       }
       else
       {
-         Point nextPos = nextPositionOcto(octo, world, target.position);
+         Point nextPos = nextPositionOcto(this, world, target.getPosition());
 
-         if (!octo.position.equals(nextPos))
+         if (!this.getPosition().equals(nextPos))
          {
             Optional<Entity> occupant = world.getOccupant(nextPos);
             if (occupant.isPresent())
@@ -339,32 +355,34 @@ final class Entity
                scheduler.unscheduleAllEvents(occupant.get());
             }
 
-            world.moveEntity(octo, nextPos);
+            world.moveEntity(this, nextPos);
          }
+//         System.out.println("Entity.moveToNotFull/ returning false");
          return false;
       }
    }
 
-   public boolean moveToFull(Entity octo, WorldModel world,
+   public boolean moveToFull(WorldModel world,
                              Entity target, EventScheduler scheduler)
    {
-      if (Functions.adjacent(octo.position, target.position))
+//      System.out.println("Entity.moveToFull");
+      if (Functions.adjacent(this.getPosition(), target.getPosition()))
       {
+//         System.out.println("Entity.moveToFull / returning true");
          return true;
       }
       else
       {
-         Point nextPos = nextPositionOcto(octo, world, target.position);
+         Point nextPos = nextPositionOcto(this, world, target.getPosition());
 
-         if (!octo.position.equals(nextPos))
+         if (!this.getPosition().equals(nextPos))
          {
             Optional<Entity> occupant = world.getOccupant(nextPos);
             if (occupant.isPresent())
             {
                scheduler.unscheduleAllEvents(occupant.get());
             }
-
-            world.moveEntity(octo, nextPos);
+            world.moveEntity(this, nextPos);
          }
          return false;
       }
@@ -373,7 +391,7 @@ final class Entity
    public boolean moveToCrab(WorldModel world,
                              Entity target, EventScheduler scheduler)
    {
-      if (Functions.adjacent(getPosition(), target.position))
+      if (Functions.adjacent(getPosition(), target.getPosition()))
       {
          world.removeEntity(target);
          scheduler.unscheduleAllEvents(target);
@@ -381,7 +399,7 @@ final class Entity
       }
       else
       {
-         Point nextPos = nextPositionCrab(this, world, target.position);
+         Point nextPos = nextPositionCrab(this, world, target.getPosition());
 
          if (!getPosition().equals(nextPos))
          {
@@ -412,7 +430,7 @@ final class Entity
 
          if (vert == 0 || world.isOccupied(newPos))
          {
-            newPos = entity.position;
+            newPos = entity.getPosition();
          }
       }
 
@@ -438,7 +456,7 @@ final class Entity
          if (vert == 0 ||
                  (occupant.isPresent() && !(occupant.get().kind == EntityKind.FISH)))
          {
-            newPos = entity.position;
+            newPos = entity.getPosition();
          }
       }
 
@@ -473,7 +491,7 @@ final class Entity
                                        List<PImage> images)
    {
       return new Entity(EntityKind.ATLANTIS, id, position, images,
-              0, 0, 0, 0);
+              0, 0, 0, ATLANTIS_ANIMATION_PERIOD);
    }
 
    public static Entity createObstacle(String id, Point position,
